@@ -7,8 +7,8 @@ import sqlite3 from 'sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-dotenv.config({ path: '.env.local' });
 dotenv.config();
+dotenv.config({ path: '.env.local' });
 
 const argv = yargs(hideBin(process.argv))
   .usage('Usage: $0 [bearLink] [options]')
@@ -74,6 +74,22 @@ function queryBearNote(noteId) {
   });
 }
 
+function processZText(content) {
+  if (!content) return '';
+  
+  const lines = content.split('\n');
+  let startIndex = 0;
+  
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === '---') {
+      startIndex = i;
+      break;
+    }
+  }
+  
+  return lines.slice(startIndex).join('\n');
+}
+
 function rewriteImageReferences(content) {
   const imagePath = process.env.BEAR_IMAGE_PATH;
   if (!imagePath) {
@@ -118,7 +134,8 @@ async function exportBearNote(bearLink, outputPath) {
   try {
     const noteId = extractBearNoteId(bearLink);
     const noteData = await queryBearNote(noteId);
-    const content = rewriteImageReferences(noteData.ZTEXT || '');
+    const processedContent = processZText(noteData.ZTEXT || '');
+    const content = rewriteImageReferences(processedContent);
     const title = noteData.ZTITLE || 'Untitled Note';
     
     const bundlePath = createTextBundle(outputPath, content, title);
@@ -141,7 +158,8 @@ function watchNote(noteId, outputPath, callback) {
       
       if (lastModified !== null && currentModified !== lastModified) {
         console.log('Note changed, updating export...');
-        const content = rewriteImageReferences(noteData.ZTEXT || '');
+        const processedContent = processZText(noteData.ZTEXT || '');
+        const content = rewriteImageReferences(processedContent);
         const title = noteData.ZTITLE || 'Untitled Note';
         createTextBundle(outputPath, content, title);
         if (callback) callback(noteData);
