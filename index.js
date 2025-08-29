@@ -79,15 +79,33 @@ function processZText(content) {
   
   const lines = content.split('\n');
   let startIndex = 0;
+  let isCodeBlockFormat = false;
   
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trim() === '---') {
+    const line = lines[i].trim();
+    
+    if (line === '```' && i + 1 < lines.length && lines[i + 1].trim() === '---') {
+      startIndex = i + 1;
+      isCodeBlockFormat = true;
+      break;
+    } else if (line === '---') {
       startIndex = i;
       break;
     }
   }
   
-  return lines.slice(startIndex).join('\n');
+  const result = lines.slice(startIndex);
+  
+  if (isCodeBlockFormat) {
+    for (let i = 1; i < result.length; i++) {
+      if (result[i].trim() === '---' && i + 1 < result.length && result[i + 1].trim() === '```') {
+        result.splice(i + 1, 1);
+        break;
+      }
+    }
+  }
+  
+  return result.join('\n');
 }
 
 function rewriteImageReferences(content) {
